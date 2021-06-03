@@ -250,10 +250,14 @@ Uma vantagem disso é que permite quebrar ainda mais o processamento em unidades
 
 _Crawling_ é todo um universo de problemas que podem acontecer: problemas de rede (falha de conexão, timeouts etc.), HTMLs quebrados, páginas que dependem agressivamente de JavaScript para funcionar, links quebrados, armadilhas etc.
 
-Como são muitos, e dependem muito dos sites em questão, não faz sentido explorar todos aqui, então fica como exercício para o leitor. ;-)
+Como são muitos, e são comumente particulares a cada site, não faz sentido explorar todos aqui, então fica como exercício para quem lê. ;-)
 
 
 ### Conclusão
+
+Desde a introdução do `asyncio` ao Python, ficou relativamente fácil ganhar performance em aplicações IO-bound, e crawling é só uma das muitas aplicações desse conceito. Além disso, são relativamente poucas as alterações necessárias para transformar um código sync em async, mas ainda assim é necessário prestar atenção aos detalhes: concorrência, sincronização etc.
+
+De qualquer forma, espero ter ajudado você a entender um pouco mais como utilizar o `asyncio`.
 
 
 ### Código completo
