@@ -50,7 +50,6 @@ async def crawl(semaphore: asyncio.Semaphore,
     # fila de urls a visitar.
     # já adicionamos a url original, que tem profundidade 0
     queue: asyncio.LifoQueue[Tuple[int, List[str]]] = asyncio.LifoQueue()
-#    queue: Queue[Tuple[int, List[str]]] = Queue()
     await queue.put((0, [seed]))
 
     # se a fila estiver vazia, paramos o processamento
