@@ -2,8 +2,6 @@
 **/.*.sw?
 **/_cache
 **/.stack-work
-**/dist
-**/dist-*
 **/cabal-dev
 **/*.o
 **/*.hi

@@ -1,0 +1,11 @@
+digraph G {
+    node [shape = "ellipse"];
+    fetch_queue;
+    process_queue;
+
+    node [shape = "box"];
+    fetch;
+    process;
+
+    { rank="same"; fetch_queue -> fetch -> process_queue -> process -> fetch_queue; }
+}
