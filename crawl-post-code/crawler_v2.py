@@ -1,5 +1,4 @@
 import sys
-from queue import Queue
 from typing import List
 from urllib.parse import urljoin, urlparse
 
@@ -50,13 +49,13 @@ async def crawl(semaphore: asyncio.Semaphore,
 
     # fila de urls a visitar.
     # já adicionamos a url original, que tem profundidade 0
-#    queue: asyncio.LifoQueue[Tuple[int, List[str]]] = asyncio.LifoQueue()
-    queue: Queue[Tuple[int, List[str]]] = Queue()
-    queue.put((0, [seed]))
+    queue: asyncio.LifoQueue[Tuple[int, List[str]]] = asyncio.LifoQueue()
+#    queue: Queue[Tuple[int, List[str]]] = Queue()
+    await queue.put((0, [seed]))
 
     # se a fila estiver vazia, paramos o processamento
     while not queue.empty():
-        depth, urls = queue.get()
+        depth, urls = await queue.get()
 
         visited_in_this_run = []
         results = []
@@ -83,7 +82,7 @@ async def crawl(semaphore: asyncio.Semaphore,
                     if link not in visited and should_visit(seed, link):
                         next_urls.append(link)
 
-                queue.put((depth + 1, next_urls))
+                await queue.put((depth + 1, next_urls))
 
 
 async def main():
