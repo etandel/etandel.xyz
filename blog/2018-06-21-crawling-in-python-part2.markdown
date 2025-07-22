@@ -61,7 +61,7 @@ async def fetch(session: ClientSession, url: str) -> str:
 
 Primeiro, vale notar que estamos definindo a função agora com `async def`.
 Isso diz para o interpretador que a função é na verdade uma co-rotina e portanto pode ser "pausada".
-Isso ocorre justamente em `await response.text()`: nessa linha dizemos que pode ser que a operação demore um pouco e portanto podemos entregar o controle para alguma outra co-rotina que já esteja pronta pra continuar.
+Isso ocorre justamente em `await response.text()`: nessa linha dizemos que pode ser que a operação tenha que esperar e portanto podemos entregar o controle para alguma outra co-rotina que já esteja pronta pra continuar.
 
 Além disso, agora a função está recebendo um outro parâmetro, uma `ClientSession`.
 As requisições feitas pela `aiohttp` ocorrem sempre dento de uma sessão, o que permite à biblioteca certas otimizações que aceleram ainda mais o IO.
@@ -235,8 +235,8 @@ Para realmente ganharmos mais performance então precisaríamos permitir escalab
 
 O código já até dá um bom indício de como fazer isso: se a fila fosse compartilhada entre múltiplos processos, o código já funcionaria distribuído com poquíssima alteração:
 
-- Transformar a fila de URLs em algo compartilhado, usando algum message broker ([RabbitMQ](https://www.rabbitmq.com/), [ZeroMQ](https://zeromq.org/), [Kafka](https://kafka.apache.org/) etc.).
-- Transformar o `fetch()` em um processo próprio que lê as URLs da fila.
+- Transformar a fila de URLs em algo compartilhado, usando algum _message broker_ ([RabbitMQ](https://www.rabbitmq.com/), [ZeroMQ](https://zeromq.org/), [Kafka](https://kafka.apache.org/) etc.).
+- Transformar o `fetch()` em um processo próprio que lê as URLs da fila compartilahada.
 - Criar uma fila de páginas já visitadas a serem processadas.
 - Transformar o processamento da página e extração de links em um processo que lê da fila anterior.
 
@@ -248,7 +248,7 @@ Uma vantagem disso é que permite quebrar ainda mais o processamento em unidades
 
 #### Erros e pegadinhas
 
-_Crawling_ é todo um universo de problemas que podem acontecer: problemas de rede (falha de conexão, timeouts etc.), HTMLs quebrados, páginas que dependem agressivamente de JavaScript para funcionar, links quebrados, armadilhas etc.
+_Crawling_ é todo um universo de problemas que podem acontecer: problemas de rede (falha de conexão, timeouts etc.), HTMLs quebrados, páginas que dependem de JavaScript para funcionar, links quebrados, armadilhas etc.
 
 Como são muitos, e são comumente particulares a cada site, não faz sentido explorar todos aqui, então fica como exercício para quem lê. ;-)
 
