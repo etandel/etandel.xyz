@@ -11,22 +11,21 @@ Nesse post vamos ver como as capacidades assíncronas das últimas versões do P
 
 ### Medindo a performance
 
-Antes de tentarmos melhor a performance é bom medir exatamente a atual, para termos uma base para comparar. Rodando o crawler para esse site usando uma conexão meio ruim, temos:
+Antes de tentarmos melhor a performance é bom medir exatamente a atual, para termos uma base para comparar. Rodando o crawler para esse site usando uma conexão mais ou menos, temos:
 
 ```
-% time python crawler.py 2 https://etandel.xyz/
-0 - https://etandel.xyz/
+$ time python crawler_v1.py 2  https://etandel.xyz
+0 - https://etandel.xyz
+1 - https://etandel.xyz/
 1 - https://etandel.xyz/contact.html
 1 - https://etandel.xyz/blog.html
 2 - https://etandel.xyz/blog/2018-07-30-crawling-in-python-part1.html
 2 - https://etandel.xyz/blog/2018-06-10-protecting_postgresql_from_delete.html
-python crawler_v1.py 3 http://etandel.xyz/  0.63s user 0.05s system 12% cpu 5.627 total
+python crawler_v1.py 2 https://etandel.xyz  1.06s user 0.05s system 52% cpu 2.104 total
 ```
 
-Rodando mais algumas vezes para diminuir erros aleatórios, cheguei a uma média de ~12 segundos.
 
-
-Antes de sair otimizando o código, primeiro temos que encontrar os pontos no código que estão gerando o gargalo de performance.  Fazendo mais alguns testes com a `requests`, percebi que cada requisição está demorando em média ~1 segundo. Comparando com o tempo total do crawling, dá pra ver que o código passa quase que o tempo todo só esperando a requisição ser feita. E como a implementação que fizemos é sequencial, isso significa que o tempo total vai ser a soma dos tempos de cada requisição (mais algum diferencial para parsing, imprimir na tela etc. que no nosso caso é desprezível).
+Antes de sair otimizando o código, primeiro temos que encontrar os pontos no código que estão gerando o gargalo de performance.  Fazendo mais alguns testes com a `requests`, percebi que cada requisição está demorando entre 200 e 500 milissegundos. Comparando com o tempo total do crawling, dá pra ver que o código passa quase que o tempo todo só esperando a requisição ser feita. E como a implementação que fizemos é sequencial, isso significa que o tempo total vai ser a soma dos tempos de cada requisição (mais algum diferencial para parsing, imprimir na tela etc. que no nosso caso é desprezível).
 
 Isso significa que o sistema é *IO-bound*. Ou seja, o gargalo está em esperar por eventos de entrada e saída, que no caso é a comunicação pela rede. Uma forma óbvia de resolver isso é simplesmente arranjar uma conexão de internet mais rápida, o que diminuiria o tempo de cada requisição e portanto o tempo total.
 
@@ -204,23 +203,50 @@ async def main():
 
 ### Testando com G1
 
-Rodando com concorrência = 10:
+Rodando a versão sequencial, com profundidade máxima de 1 (porque mais que isso demora muito):
+```
+$ time python crawler_v1.py 1  https://g1.globo.com
+0 - https://g1.globo.com
+1 - https://g1.globo.com/
+1 - https://g1.globo.com/fantastico/noticia/2025/07/22/nao-me-resta-muito-tempo-disse-ozzy-osbourne-em-entrevista-ao-fantastico.ghtml
+1 - https://g1.globo.com/saude/noticia/2025/07/22/ozzy-osbourne-parkinson-problemas-saude.ghtml
+1 - https://g1.globo.com/pop-arte/musica/noticia/2025/07/22/ozzy-osbourne-relembre-a-carreira-do-musico-em-fotos.ghtml
+1 - https://g1.globo.com/pop-arte/musica/noticia/2025/07/22/ozzy-osbourne-fez-seu-ultimo-show-com-o-black-sabbath-no-comeco-de-julho.ghtml
+...
+1 - https://g1.globo.com/institucional/sobre-o-g1.ghtml
+1 - https://g1.globo.com/institucional/equipe-do-g1.ghtml
+1 - https://g1.globo.com/institucional/vc-no-g1-como-entrar-em-contato-enviar-videos-fotos-e-mensagens.ghtml
+1 - https://g1.globo.com/institucional/termos-de-uso-do-g1.ghtml
+python crawler_v1.py 1 https://g1.globo.com  33.54s user 0.74s system 5% cpu 10:06.23 total
+```
 
-TODO
+Rodando agora com concorrência = 10:
+```
+$ time python crawler_v2.py 10 1  https://g1.globo.com
+0 - https://g1.globo.com
+1 - https://g1.globo.com/
+1 - https://g1.globo.com/fantastico/noticia/2025/07/22/nao-me-resta-muito-tempo-disse-ozzy-osbourne-em-entrevista-ao-fantastico.ghtml
+1 - https://g1.globo.com/saude/noticia/2025/07/22/ozzy-osbourne-parkinson-problemas-saude.ghtml
+1 - https://g1.globo.com/pop-arte/musica/noticia/2025/07/22/ozzy-osbourne-relembre-a-carreira-do-musico-em-fotos.ghtml
+...
+1 - https://g1.globo.com/institucional/sobre-o-g1.ghtml
+1 - https://g1.globo.com/institucional/equipe-do-g1.ghtml
+1 - https://g1.globo.com/institucional/vc-no-g1-como-entrar-em-contato-enviar-videos-fotos-e-mensagens.ghtml
+1 - https://g1.globo.com/institucional/termos-de-uso-do-g1.ghtml
+python crawler_v2.py 10 1 https://g1.globo.com  5.75s user 0.41s system 32% cpu 19.171 total
+```
 
-Agora sim =)
-
-Note que o tempo foi bem melhor também. Comparando com a versão sequencial, tive um aumento de ~Yx.  TODO
+Apenas 30x mais rápido =)
 
 
 ### Melhorias
 
 #### `gather()` vs `as_completed()`
 
-Uma das coisas que podem ser melhoradas é a forma como as tarefas rodam concorrentemente. Da forma que fizemos, tentamos rodar todas as filhas de uma página ao mesmo tempo, o que tem dois problemas:
+Uma das coisas que podem ser melhoradas é a forma como as tarefas rodam concorrentemente. Da forma que fizemos, tentamos rodar todas as filhas de uma página ao mesmo tempo, o que tem pelo menos dois problemas:
 
-1. O crawler fica suscetível a um ataque onde uma página possui muitos e muitos links, o que pode fazer estourar a memóra (já que vamos criar todas as tasks simultaneamente).
-1. Se uma página tem menos links que a concorrência máxima configurada, estaremos desperdiçando concorrência. Por exemplo, se colocarmos o limite em 10 e visitarmos uma página com só 2 filhas, teríamos 8 _slots_ vazios que poderiam estar puxando alguma outra página da fila.
+1. Se uma página possui muitos links, vamos enfileirar uma task para cada um, o que pode gerar um problem de memória.
+1. Se uma página tem menos links que a concorrência máxima configurada, estaremos desperdiçando concorrência. Por exemplo, se colocamos o limite em 10 e visitamos uma página com só 2 filhas, teríamos 8 _slots_ vazios que poderiam estar puxando alguma outro link da fila.
 
 Além disso, o `gather()` espera todas as tasks terminarem antes de seguir, o que significa que se uma página demorar mais que as outras, o processamento vai ficar esperando ela sendo que já daria pra ir processando o que já tá pronto.
 
@@ -235,12 +261,12 @@ Para realmente ganharmos mais performance então precisaríamos permitir escalab
 
 O código já até dá um bom indício de como fazer isso: se a fila fosse compartilhada entre múltiplos processos, o código já funcionaria distribuído com poquíssima alteração:
 
-- Transformar a fila de URLs em algo compartilhado, usando algum _message broker_ ([RabbitMQ](https://www.rabbitmq.com/), [ZeroMQ](https://zeromq.org/), [Kafka](https://kafka.apache.org/) etc.).
-- Transformar o `fetch()` em um processo próprio que lê as URLs da fila compartilahada.
-- Criar uma fila de páginas já visitadas a serem processadas.
-- Transformar o processamento da página e extração de links em um processo que lê da fila anterior.
+- Transformar a fila de URLs em algo que possa ser compartilhado por múltiplos processos em máquinas diferentes usando algum _message broker_ como [RabbitMQ](https://www.rabbitmq.com/), [ZeroMQ](https://zeromq.org/), [Kafka](https://kafka.apache.org/) etc..
+- Transformar a lógica do `fetch()` em um processo que lê as URLs da fila compartilahada, acessa a página, e manda o resultado para outra fila.
 
-![](/images/dist-crawler-architecture.svg)
+Por exemplo:
+
+![TODO](/images/dist-crawler-architecture.svg)
 
 
 Uma vantagem disso é que permite quebrar ainda mais o processamento em unidades menores se necessário, criando uma pipeline que permite escalar cada componente separadamente.
@@ -250,7 +276,7 @@ Uma vantagem disso é que permite quebrar ainda mais o processamento em unidades
 
 _Crawling_ é todo um universo de problemas que podem acontecer: problemas de rede (falha de conexão, timeouts etc.), HTMLs quebrados, páginas que dependem de JavaScript para funcionar, links quebrados, armadilhas etc.
 
-Como são muitos, e são comumente particulares a cada site, não faz sentido explorar todos aqui, então fica como exercício para quem lê. ;-)
+Como são muitos, e são comumente particulares a cada site, não faz sentido explorar todos aqui, então fica de exercício para quem lê.
 
 
 ### Conclusão
