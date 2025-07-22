@@ -1,0 +1,63 @@
+---
+title: Encoding 101 (1/3) - O que é encoding
+---
+
+
+## Intro
+
+Imagine que você está tentando explicar para seu professor que seu cachorro comeu o trabalho e que por isso você só vai poder entregá-lo amanhã. Como você comunica esse fato para ele?
+
+Primeiro, você tem que materializar essa ideia em alguma linguagem; depois você tem que transmitir essa ideia materializada usando sons ou sinais; e aí seu professor precisa interpretar esses sons ou sinais de volta para a linguagem e então, com sorte, interpretar isso para a mesma ideia que você tentou transmitir.
+
+Uma forma de ver esse processo todo é que nos dois primeiros passos você codificou sua ideia em algo que pudesse ser transmitido, enquanto que nos dois seguintes seu professor decodificou de volta a transmição para a ideia original.
+
+<img src="/images/encoding.jpg" alt="Desenho de duas pessoas se comunicando" width=500 heigh=500></img>
+
+Da mesma forma, se você precisa se comunicar com alguém que está longe, ou no futuro, você pode codificar suas ideias usando rabiscos num papel, entalhes numa pedra ou uma das outras milhares de formas de se escrever texto.
+
+Mas se você quiser materializar suas ideias num computador, você precisará usar uma **codificação**, ou, em Inglês, encoding.
+
+Como o computador só trabalha com números [1], pra gravar uma informação no computador essa informação precisa ser transformada em números. Encoding então nada mais é que uma tabela que associa caracteres de texto a números. Por exemplo, vamos criar um encoding:
+
+|       |       |       |       |       |        |        |        |
+| :---: | :---: | :---: | :---: | :---: | :---:  | :---:  | :---:  |
+| **A** | **B** | **C** | **D** |  ...  | **X**  | **Y**  | **Z**  |
+| **1** | **2** | **3** | **4** |  ...  | **24** | **25** | **26** |
+
+
+Com esse encoding já podemos salvar algumas palavras no computador. Por exemplo,
+
+|       |       |       |       |        |        |        |        |
+| :---: | :---: | :---: | :---: | :---:  | :---:  | :---:  | :---:  |
+| **C** | **A** | **C** | **H** | **O**  | **R**  | **R**  | **O**  |
+| **3** | **1** | **3** | **8** | **15** | **18** | **18** | **15** |
+
+
+No entanto, para conseguirmos codificar textos mais interessantes, precisamos também tabelar os valores para pontuação, espaços, quebra de linha etc. Para não termos esse trabalho todo, já criaram um encoding com isso tudo, o ASCII.
+
+## Do ASCII para o mundo
+
+O American Standard Code for Information Interchange é um padrão que surgiu nos anos 60 para codificar textos escritos em Inglês. Nele, cada caracter ocupa 8 bits, mas são tabelados apenas 128 caracteres, numerados de 0-127. Além das letras maíusculas e minúsculas presentes no alfabeto latino, ele suporta os tipos mais comuns de pontuação, números e alguns caracteres de controle, como tabulação, del, quebra de linha etc.
+
+O problema do **ASCII** é que com apenas 128 caracteres ele não consegue representar a imensidão de sistemas de escrita, nem mesmo os acentos das línguas latinas. Isso significa então que foram surgindo extensões do ASCII que usam os números 128-255 (o valor máximo representado em 8 bits) para representar outros caracteres. Essas extensões foram padronizadas no **ISO-8859**, em que cada extensão visava suportar um certo conjunto de línguas.
+
+Por exemplo, o **ISO-8859-1**, também conhecido como **latin-1**, engloba as línguas da europa ocidental, então posui todos os caracteres necessários para se escrever em Espanhol, Português, Islandês etc. Já o **ISO-8859-5** provê os caracteres cirílicos, enquanto que o **ISO-8859-11** cobre o Tailandês.
+
+## Um encoding para a todos dominar
+
+Já dá pra perceber que essas extensões são muitas e que não é nada fácil lidar com elas. Imagina por exemplo que você está fazendo um site em Portugês para interessados em aprender Russo. Enquanto que na maior parte da sua página você teria que usar o latin-1, nas partes em que você colocaria algum texto em Russo teria que usar o ISO-8859-5. Isso significa que a todo momento você teria que dizer para o browser "aqui começa um encoding; aqui começa outro; agora volta pro primeiro...". Um saco, né?
+
+Tentando resolver esse problema, uma galera resolveu então criar um encoding que pudesse englobar todas as línguas do mundo e ainda deixaria folga para desenhos de bichinhos e carinhas felizes.
+
+Surge então, o *Unicode*!
+
+<img src="/images/sauron.jpg" alt="Sauron" width=500 heigh=500>Sauron, logo após criar o padrão Unicode</img>
+
+Esse padrão suporta até 1,114,112 caracteres, dos quais estão sendo usados atualmente "apenas" 137,000  posições. Além de tabelar os caracteres, o Unicode também se propõe a resolver várias outras coisas, como por exemplo como esses caracteres são combinados (acentos, ideogramas etc.), ordem de leitura (começando da esquerda vs começando da direita), ordenação em diversos alfabetos diferentes entre outras.
+
+
+
+## Notas
+
+[1] Na verdade o computador lida só com 1s e 0s (ou, num nível mais fundamental ainda, com difentes voltagens), números já são uma abstração para o computador, mas pra esse post não faz tanta diferença.
+
