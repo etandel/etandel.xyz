@@ -1,5 +1,11 @@
 --------
 title: Como fazer um crawler em Python - Parte 2
+
+header-includes: |
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@etandel" />
+    <meta name="twitter:title" content="Como fazer um crawler em Python - Parte 2" />
+    <meta name="twitter:description" content="Usando asyncio para ganhar performance" />
 --------
 
 ### Introdução
@@ -385,6 +391,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
-
 ```
