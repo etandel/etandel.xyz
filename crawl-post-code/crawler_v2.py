@@ -4,15 +4,9 @@ from typing import List
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
-import requests
 
 import asyncio
-import re
-import unicodedata
-from abc import ABC, abstractmethod
-from collections import Counter
-from pprint import pprint
-from typing import Callable, Mapping, Sequence, Set, Tuple
+from typing import Set, Tuple
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
@@ -25,7 +19,6 @@ async def fetch(semaphore: asyncio.Semaphore,
     """
     async with semaphore:
         async with session.get(url) as response:
-            print(f'Trying {url}')
             return await response.text()
 
 
