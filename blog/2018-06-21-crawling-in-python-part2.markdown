@@ -148,27 +148,28 @@ if __name__ == '__main__':
 
 Testando nesse site:
 
-TODO
 ```
---- resultado ---
+time python crawler_v2.py 10 2  https://etandel.xyz
+0 - https://etandel.xyz
+1 - https://etandel.xyz/
+1 - https://etandel.xyz/contact.html
+1 - https://etandel.xyz/blog.html
+2 - https://etandel.xyz/blog/2018-07-30-crawling-in-python-part1.html
+2 - https://etandel.xyz/blog/2018-06-10-protecting_postgresql_from_delete.html
+python crawler_v2.py 10 2 https://etandel.xyz  1.11s user 0.06s system 75% cpu 1.552 total
 ```
 
-Dá pra ver que tivemos um ganho bom já, caindo quase pela metade o tempo de processamento. Vamos validar no G1 também, já que ele tem muito mais URLs e por isso o ganho vai ser maior:
+Dá pra ver que tivemos algum ganho, mas que não foi tâo significativo porque são poucas páginas. Vamos validar no G1 também para comparar melhor, já que ele tem muito mais URLs, mas antes um detalhe sobre boa vizinhança.
 
-TODO
-```
---resultado--
-```
 
-Oops, parece que fomos bloqueados. Isso aconteceu porque não limitamos a quantidade de requisições que podem ser feitas simultaneamente, então o crawler vai fazendo tudo o que ele consegue ao mesmo tempo, e isso foi detectado pelos servidores do g1 como um abuso, gerando o bloqueio. É importante sempre tomar cuidado para não fazer muitas requisições para os sites de uma vez. Primeiro, porque muitas vezes os sites não estão preparados para receber muitas requisições de uma vez, e você pode acabar interferindo com o funcionamento deles. Segundo, porque justamente para evitar que isso aconteça muitos sites acabam bloqueando origens com um _throughput_ de requisições alto.
+Do jeito que o código foi estruturado, estamos tentando buscar o máximo de páginas que conseguimos ao mesmo tempo. Isso pode acabar sobrecarregando alguns sites, o que não é muito legal de se fazer. Além disso, pode ser contraproducente porque esse tipo de comportamento pode ser detectado por alguns sites como um abuso, e podem acabar bloqueando seu crawler ou fazendo algum tipo de _throttling_ nas respotas. 
 
-A solução é limitarmos a quantidade de requisições simultâneas usando um semáforo.
+Então é importante sempre tomar cuidado para não sobrecarregar os sites fazendo muitas requisições ao mesmo tempo, e uma boa forma de fazer isso é com um semáforo.
 
 ### Semáforo
 
 Semáforos são estruturas que permitem coordenar as co-rotinas controlando quantas podem executar por vez, igual a... semáforos.
-Uma outra metáfora boa é a forma como vários estabelecimentos passaram a limitar a quantidade de clientes durante a pandemia de COVID-19: apenas uma quantidade fixa de clientes entra na loja e somente quando um sai que outro pode entrar.
-O segurança que fica na porta da loja coordenando isso é jutamente o que chamamos de semáfaro em computação.
+Uma metáfora que me ajuda a visualizar é que o semáforo é como um _maître_ de um restaurante: ele vai levando os clientes às suas mesas até encher, e então passa a formar uma fila de espera, de forma que só permite entrar mais um grupo quando vaga uma mesa.
 
 O próprio Python já vem com uma [implementação de semáforos assíncronos](https://docs.python.org/3/library/asyncio-sync.html#asyncio.BoundedSemaphore), que vamos usar.
 Pra facilitar os testes, vamos adicionar um parâmetro que define a concorrência máxima, criar o `BoundedSemaphore` usando esse valor, e passá-lo pelo código para ser usado na corotina `fetch()`, que é quem realmente precisa ser limitada:
@@ -266,7 +267,7 @@ O código já até dá um bom indício de como fazer isso: se a fila fosse compa
 
 Por exemplo:
 
-![TODO](/images/dist-crawler-architecture.svg)
+![diagrama mostrando uma fila sendo lida por um processo fetcher, que coloca o resultado em outra fila, que é lida por um processador, que retorna novas urls para a fila inicial.](/images/dist-crawler-architecture.svg)
 
 
 Uma vantagem disso é que permite quebrar ainda mais o processamento em unidades menores se necessário, criando uma pipeline que permite escalar cada componente separadamente.
@@ -288,5 +289,102 @@ De qualquer forma, espero ter ajudado você a entender um pouco mais como utiliz
 
 ### Código completo
 
-```
+```python
+import sys
+from typing import List
+from urllib.parse import urljoin, urlparse
+
+from bs4 import BeautifulSoup
+
+import asyncio
+from typing import Set, Tuple
+
+from aiohttp import ClientSession
+from bs4 import BeautifulSoup
+
+
+async def fetch(semaphore: asyncio.Semaphore,
+                session: ClientSession, url: str) -> str:
+    """
+    Executa um GET na url e retorna o conteúdo respondido.
+    """
+    async with semaphore:
+        async with session.get(url) as response:
+            return await response.text()
+
+
+def get_links(url: str, content: str) -> List[str]:
+    """
+    Busca todas as tags <a> em content que possuam a propriedade href,
+    normaliza os hrefs para serem URLs absolutas baseadas na url dada
+    e então retorna os links em uma lista.
+    """
+    parser = BeautifulSoup(content, 'html.parser')
+    return [urljoin(url, a['href'])
+            for a in parser.find_all('a', href=True)]
+
+
+def should_visit(seed: str, link: str) -> bool:
+    return urlparse(seed).hostname == urlparse(link).hostname
+
+
+def process_page(depth: int, url: str, content: str):
+    print(f'{depth} - {url}')
+
+
+async def crawl(semaphore: asyncio.Semaphore,
+                session: ClientSession,
+                seed: str,
+                max_depth: int=3):
+    # urls já visitadas
+    visited: Set[str] = set()
+
+    # fila de urls a visitar.
+    # já adicionamos a url original, que tem profundidade 0
+    queue: asyncio.LifoQueue[Tuple[int, List[str]]] = asyncio.LifoQueue()
+    await queue.put((0, [seed]))
+
+    # se a fila estiver vazia, paramos o processamento
+    while not queue.empty():
+        depth, urls = await queue.get()
+
+        visited_in_this_run = []
+        results = []
+        tasks = []
+        for url in urls:
+            if url not in visited:
+                visited.add(url)
+                visited_in_this_run.append(url)
+                tasks.append(fetch(semaphore, session, url))
+
+        results = await asyncio.gather(*tasks)
+
+        for url, content in zip(visited_in_this_run, results):
+
+            # faz alguma coisa com o conteúdo
+            process_page(depth, url, content)
+
+            # se a profundidade atual já for máxima, nem pegamos os links
+            # se não, adicionamos cada link na fila,
+            # lembrando de incrementar a profundidade
+            if depth < max_depth:
+                next_urls = []
+                for link in get_links(url, content):
+                    if link not in visited and should_visit(seed, link):
+                        next_urls.append(link)
+
+                await queue.put((depth + 1, next_urls))
+
+
+async def main():
+    max_concurrency, max_depth, seed = sys.argv[1:]
+    semaphore = asyncio.BoundedSemaphore(int(max_concurrency))
+    async with ClientSession() as session:
+        await crawl(semaphore, session, seed, int(max_depth))
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
+
+
 ```
