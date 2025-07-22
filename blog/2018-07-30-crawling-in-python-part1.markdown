@@ -21,7 +21,7 @@ Crawlers são usados principalmente para [replicar sites](https://en.wikipedia.o
 
 A lógica de um crawler pode ser resumida no diagrama abaixo:
 
-![](/images/crawler-flowchart.svg)
+![fluxograma da lógica de um crawler](/images/crawler-flowchart.svg)
 
 Note que essencialmente um crawler é simples: possui apenas um _loop_ e algumas condições de parada. No entanto, são tantos os problemas que podem ocorrer em qualquer uma dessas etapas que criar e manter um crawler robusto e rápido não é nem um pouco trivial. Por isso, apesar de existirem diversas ferramentas no mercado que abstraem essa tarefa - e para produção você provavelmente deveria usar uma delas em vez de criar outra do zero -, essa série visa explicar o passo-a-passo de criar um crawler em Python, iniciando com uma implementação mais ingênua e evoluindo ela para ganhar performance e lidar melhor com dificuldades comuns.
 
